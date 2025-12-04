@@ -25,6 +25,48 @@
             color: transparent;
         }
         .subtitle { color: #94a3b8; }
+        
+        /* Net Worth Progress Bar */
+        .networth-progress {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .progress-bar-container {
+            background: #1e293b;
+            border-radius: 8px;
+            height: 30px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(to right, #10b981, #34d399);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+        
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -61,6 +103,8 @@
         .btn-secondary:hover { background: #475569; }
         .btn-blue { background: #3b82f6; color: white; }
         .btn-blue:hover { background: #2563eb; }
+        .btn-purple { background: #8b5cf6; color: white; }
+        .btn-purple:hover { background: #7c3aed; }
         .btn-danger { background: transparent; color: #f87171; }
         .btn-danger:hover { color: #ef4444; }
         .btn-edit { background: transparent; color: #60a5fa; }
@@ -136,6 +180,43 @@
             border-radius: 12px;
         }
 
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .modal-title { font-size: 1.5rem; font-weight: bold; }
+        .modal-close {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .modal-close:hover { color: white; }
+
         .hidden { display: none; }
     </style>
 </head>
@@ -144,7 +225,27 @@
     <div class="container">
         <div class="header">
             <h1 class="title">Net Worth Tracker</h1>
-            <p class="subtitle">Track your investments and net worth</p>
+            <p class="subtitle">Track your investments and reach financial independence</p>
+        </div>
+
+        <!-- Net Worth Progress Bar -->
+        <div class="networth-progress" id="networthProgress">
+            <div class="progress-header">
+                <div>
+                    <div class="stat-label">Net Worth Goal Progress</div>
+                    <div class="stat-value" id="goalProgressText">Set a goal to track progress</div>
+                </div>
+                <button class="btn btn-purple" onclick="openGoalModal()">🎯 Set Goal</button>
+            </div>
+            <div class="progress-bar-container" id="progressBarContainer" style="display: none;">
+                <div class="progress-bar" id="progressBar">
+                    <span id="progressPercent"></span>
+                </div>
+            </div>
+            <div class="progress-label" id="progressLabel" style="display: none;">
+                <span id="currentAmount"></span>
+                <span id="goalAmount"></span>
+            </div>
         </div>
 
         <!-- Stats -->
@@ -162,6 +263,11 @@
                 <div class="stat-value" id="totalReturns">₹0</div>
                 <div id="totalReturnsPercent" class="stat-label"></div>
             </div>
+            <div class="stat-card" style="cursor: pointer;" onclick="openFireModal()">
+                <div class="stat-label">🔥 FIRE Number</div>
+                <div class="stat-value" id="fireNumber">Click to calculate</div>
+                <div class="stat-label" id="fireYears" style="margin-top: 0.5rem;"></div>
+            </div>
         </div>
 
         <!-- Add investment button -->
@@ -169,8 +275,7 @@
 
         <!-- Action bar -->
         <div style="margin: 1rem 0; display:flex; gap:1rem;">
-            <button id="shareBtn" class="btn btn-blue hidden" onclick="sharePortfolio()">Share</button>
-            <button id="bookmarkBtn" class="btn btn-secondary hidden" onclick="bookmarkPage()">Bookmark</button>
+            <button id="shareBtn" class="btn btn-blue hidden" onclick="sharePortfolio()">📤 Share</button>
         </div>
 
         <!-- Add Form -->
@@ -207,12 +312,95 @@
         <!-- Empty State -->
         <div id="emptyState" class="empty-state">
             <p style="font-size: 1.25rem; color: #94a3b8; margin-bottom: 0.5rem;">No investments yet</p>
-            <p style="color: #64748b;">Click “Add Investment” to start tracking your net worth</p>
+            <p style="color: #64748b;">Click "Add Investment" to start tracking your net worth</p>
+        </div>
+    </div>
+
+    <!-- Goal Modal -->
+    <div id="goalModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Set Net Worth Goal</h2>
+                <button class="modal-close" onclick="closeGoalModal()">×</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Target Net Worth (₹)</label>
+                <input type="number" class="form-input" id="goalInput" placeholder="10000000">
+            </div>
+            <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                <button class="btn btn-primary" onclick="saveGoal()">Save Goal</button>
+                <button class="btn btn-danger" onclick="clearGoal()">Clear Goal</button>
+                <button class="btn btn-secondary" onclick="closeGoalModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FIRE Modal -->
+    <div id="fireModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">🔥 FIRE Calculator</h2>
+                <button class="modal-close" onclick="closeFireModal()">×</button>
+            </div>
+            <p style="color: #94a3b8; margin-bottom: 1rem; font-size: 0.875rem;">
+                Calculate how much you need to retire based on the 4% rule (25x annual expenses)
+            </p>
+            <div class="form-group">
+                <label class="form-label">Annual Expenses (₹)</label>
+                <input type="number" class="form-input" id="annualExpenses" placeholder="500000">
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label class="form-label">Expected Annual Return (%)</label>
+                <input type="number" class="form-input" id="expectedReturn" placeholder="12" value="12">
+            </div>
+            <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                <button class="btn btn-primary" onclick="calculateFire()">Calculate</button>
+                <button class="btn btn-secondary" onclick="closeFireModal()">Close</button>
+            </div>
+            <div id="fireResults" style="margin-top: 1.5rem; display: none;">
+                <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 8px; padding: 1rem;">
+                    <div class="stat-label">FIRE Number (25x expenses)</div>
+                    <div class="stat-value positive" id="fireAmount"></div>
+                    <div style="margin-top: 1rem;">
+                        <div class="stat-label">Years to FIRE</div>
+                        <div style="font-size: 1.25rem; font-weight: 600;" id="yearsToFire"></div>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <div class="stat-label">Amount Needed</div>
+                        <div style="font-size: 1.25rem; font-weight: 600;" id="amountNeeded"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Purchase Modal -->
+    <div id="editPurchaseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Edit Purchase</h2>
+                <button class="modal-close" onclick="closeEditPurchaseModal()">×</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Amount (₹)</label>
+                <input type="number" class="form-input" id="editPurchaseAmount">
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label class="form-label">Date</label>
+                <input type="date" class="form-input" id="editPurchaseDate">
+            </div>
+            <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                <button class="btn btn-primary" onclick="saveEditPurchase()">Save Changes</button>
+                <button class="btn btn-secondary" onclick="closeEditPurchaseModal()">Cancel</button>
+            </div>
         </div>
     </div>
 
     <script>
         let investments = {};
+        let goal = null;
+        let fireData = null;
+        let editingPurchase = null;
 
         function getTodayDate() {
             return new Date().toISOString().split('T')[0];
@@ -222,7 +410,13 @@
             const urlParams = new URLSearchParams(window.location.search);
             urlParams.forEach((value, key) => {
                 try {
-                    investments[key] = JSON.parse(decodeURIComponent(value));
+                    if (key === 'goal') {
+                        goal = JSON.parse(decodeURIComponent(value));
+                    } else if (key === 'fire') {
+                        fireData = JSON.parse(decodeURIComponent(value));
+                    } else {
+                        investments[key] = JSON.parse(decodeURIComponent(value));
+                    }
                 } catch (e) {
                     console.error('Error parsing:', e);
                 }
@@ -235,6 +429,12 @@
             Object.entries(investments).forEach(([key, data]) => {
                 params.set(key, encodeURIComponent(JSON.stringify(data)));
             });
+            if (goal) {
+                params.set('goal', encodeURIComponent(JSON.stringify(goal)));
+            }
+            if (fireData) {
+                params.set('fire', encodeURIComponent(JSON.stringify(fireData)));
+            }
             window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
         }
 
@@ -285,7 +485,6 @@
                 purchases: [{ amount, date, id: Date.now() }]
             };
 
-            // Reset
             document.getElementById('investmentName').value = '';
             document.getElementById('amount').value = '';
             document.getElementById('date').value = getTodayDate();
@@ -377,26 +576,127 @@
             const purchase = investments[invKey].purchases.find(p => p.id === purchaseId);
             if (!purchase) return;
 
-            const newAmount = prompt('Purchase Amount (₹):', purchase.amount);
-            if (newAmount === null) return;
+            editingPurchase = { invKey, purchaseId };
+            document.getElementById('editPurchaseAmount').value = purchase.amount;
+            document.getElementById('editPurchaseDate').value = purchase.date;
+            document.getElementById('editPurchaseModal').classList.add('show');
+        }
 
-            const newDate = prompt('Purchase Date (YYYY-MM-DD):', purchase.date);
-            if (newDate === null) return;
+        function closeEditPurchaseModal() {
+            document.getElementById('editPurchaseModal').classList.remove('show');
+            editingPurchase = null;
+        }
 
-            purchase.amount = parseFloat(newAmount);
-            purchase.date = newDate;
+        function saveEditPurchase() {
+            if (!editingPurchase) return;
 
-            saveToURL();
-            render();
+            const amount = parseFloat(document.getElementById('editPurchaseAmount').value);
+            const date = document.getElementById('editPurchaseDate').value;
+
+            if (!amount || !date) {
+                alert('Please fill all fields');
+                return;
+            }
+
+            const purchase = investments[editingPurchase.invKey].purchases.find(
+                p => p.id === editingPurchase.purchaseId
+            );
+
+            if (purchase) {
+                purchase.amount = amount;
+                purchase.date = date;
+                saveToURL();
+                render();
+            }
+
+            closeEditPurchaseModal();
         }
 
         function sharePortfolio() {
             navigator.clipboard.writeText(window.location.href);
-            alert('URL copied to clipboard!');
+            alert('URL copied to clipboard! Share this link to view your portfolio.');
         }
 
-        function bookmarkPage() {
-            alert('Press Ctrl+D (Cmd+D on Mac) to bookmark this page.');
+        function openGoalModal() {
+            if (goal) {
+                document.getElementById('goalInput').value = goal;
+            }
+            document.getElementById('goalModal').classList.add('show');
+        }
+
+        function closeGoalModal() {
+            document.getElementById('goalModal').classList.remove('show');
+        }
+
+        function saveGoal() {
+            const goalValue = parseFloat(document.getElementById('goalInput').value);
+            if (!goalValue || goalValue <= 0) {
+                alert('Please enter a valid goal amount');
+                return;
+            }
+            goal = goalValue;
+            saveToURL();
+            render();
+            closeGoalModal();
+        }
+
+        function clearGoal() {
+            if (confirm('Clear your net worth goal?')) {
+                goal = null;
+                saveToURL();
+                render();
+                closeGoalModal();
+            }
+        }
+
+        function openFireModal() {
+            if (fireData) {
+                document.getElementById('annualExpenses').value = fireData.expenses;
+                document.getElementById('expectedReturn').value = fireData.returnRate;
+            }
+            document.getElementById('fireModal').classList.add('show');
+        }
+
+        function closeFireModal() {
+            document.getElementById('fireModal').classList.remove('show');
+        }
+
+        function calculateFire() {
+            const expenses = parseFloat(document.getElementById('annualExpenses').value);
+            const returnRate = parseFloat(document.getElementById('expectedReturn').value) / 100;
+
+            if (!expenses || expenses <= 0) {
+                alert('Please enter valid annual expenses');
+                return;
+            }
+
+            const fireAmount = expenses * 25;
+            const currentNetWorth = Object.values(investments).reduce((sum, inv) => sum + inv.currentValue, 0);
+            const needed = fireAmount - currentNetWorth;
+
+            fireData = {
+                expenses,
+                returnRate: returnRate * 100,
+                fireAmount,
+                currentNetWorth
+            };
+
+            document.getElementById('fireAmount').textContent = formatCurrency(fireAmount);
+            document.getElementById('amountNeeded').textContent = formatCurrency(Math.max(0, needed));
+
+            if (needed > 0 && returnRate > 0) {
+                const years = Math.log(fireAmount / currentNetWorth) / Math.log(1 + returnRate);
+                const yearsText = years > 0 ? `${years.toFixed(1)} years` : 'Already achieved! 🎉';
+                document.getElementById('yearsToFire').textContent = yearsText;
+            } else if (needed <= 0) {
+                document.getElementById('yearsToFire').textContent = 'Already achieved! 🎉';
+            } else {
+                document.getElementById('yearsToFire').textContent = 'Add expected return rate';
+            }
+
+            document.getElementById('fireResults').style.display = 'block';
+            saveToURL();
+            render();
         }
 
         function render() {
@@ -423,13 +723,42 @@
             document.getElementById('totalReturnsPercent').className =
                 `stat-label ${totalReturns >= 0 ? 'positive' : 'negative'}`;
 
+            // Update goal progress
+            if (goal && goal > 0) {
+                const progress = Math.min((totalCurrent / goal) * 100, 100);
+                document.getElementById('goalProgressText').textContent = 
+                    `${formatCurrency(totalCurrent)} / ${formatCurrency(goal)}`;
+                document.getElementById('progressBar').style.width = `${progress}%`;
+                document.getElementById('progressPercent').textContent = `${progress.toFixed(1)}%`;
+                document.getElementById('currentAmount').textContent = formatCurrency(totalCurrent);
+                document.getElementById('goalAmount').textContent = formatCurrency(goal);
+                document.getElementById('progressBarContainer').style.display = 'block';
+                document.getElementById('progressLabel').style.display = 'flex';
+            } else {
+                document.getElementById('goalProgressText').textContent = 'Set a goal to track progress';
+                document.getElementById('progressBarContainer').style.display = 'none';
+                document.getElementById('progressLabel').style.display = 'none';
+            }
+
+            // Update FIRE display
+            if (fireData) {
+                document.getElementById('fireNumber').textContent = formatCurrency(fireData.fireAmount);
+                const needed = fireData.fireAmount - totalCurrent;
+                if (needed <= 0) {
+                    document.getElementById('fireYears').textContent = '🎉 FIRE achieved!';
+                    document.getElementById('fireYears').className = 'stat-label positive';
+                } else {
+                    document.getElementById('fireYears').textContent = `${formatCurrency(needed)} to go`;
+                    document.getElementById('fireYears').className = 'stat-label';
+                }
+            }
+
             const container = document.getElementById('investments');
             const empty = document.getElementById('emptyState');
 
             const hasInvestments = Object.keys(investments).length > 0;
 
             document.getElementById('shareBtn').classList.toggle('hidden', !hasInvestments);
-            document.getElementById('bookmarkBtn').classList.toggle('hidden', !hasInvestments);
 
             if (!hasInvestments) {
                 container.innerHTML = '';
@@ -505,11 +834,11 @@
                                 <tr>
                                     <th>Purchase Date</th>
                                     <th style="text-align:right;">Amount Invested</th>
-                                    <th style="text-align:center;">Action</th>
+                                    <th style="text-align:center;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                ${inv.purchases.map(p => `
+                                ${inv.purchases.sort((a, b) => new Date(b.date) - new Date(a.date)).map(p => `
                                     <tr>
                                         <td>${formatDate(p.date)}</td>
                                         <td style="text-align:right; font-weight:600;">${formatCurrency(p.amount)}</td>
