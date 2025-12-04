@@ -25,7 +25,12 @@
             color: transparent;
         }
         .subtitle { color: #94a3b8; }
-        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
         .stat-card {
             background: rgba(30, 41, 59, 0.5);
             backdrop-filter: blur(10px);
@@ -37,6 +42,7 @@
         .stat-value { font-size: 1.5rem; font-weight: bold; }
         .positive { color: #34d399; }
         .negative { color: #f87171; }
+
         .btn {
             padding: 0.75rem 1.5rem;
             border-radius: 8px;
@@ -51,12 +57,15 @@
         }
         .btn-primary { background: #10b981; color: white; }
         .btn-primary:hover { background: #059669; }
-        .btn-secondary { background: #475569; color: white; }
-        .btn-secondary:hover { background: #334155; }
+        .btn-secondary { background: #64748b; color: white; }
+        .btn-secondary:hover { background: #475569; }
+        .btn-blue { background: #3b82f6; color: white; }
+        .btn-blue:hover { background: #2563eb; }
         .btn-danger { background: transparent; color: #f87171; }
         .btn-danger:hover { color: #ef4444; }
         .btn-edit { background: transparent; color: #60a5fa; }
         .btn-edit:hover { color: #3b82f6; }
+
         .form-card {
             background: rgba(30, 41, 59, 0.5);
             backdrop-filter: blur(10px);
@@ -65,7 +74,14 @@
             padding: 1.5rem;
             margin-bottom: 2rem;
         }
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
         .form-group { display: flex; flex-direction: column; }
         .form-label { color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.5rem; }
         .form-input {
@@ -77,6 +93,7 @@
             font-size: 1rem;
         }
         .form-input:focus { outline: none; border-color: #10b981; }
+
         .investment-card {
             background: rgba(30, 41, 59, 0.5);
             backdrop-filter: blur(10px);
@@ -92,13 +109,25 @@
             justify-content: space-between;
             align-items: start;
         }
-        .investment-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem; }
+        .investment-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
         .investment-actions { display: flex; gap: 0.5rem; }
+
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 1rem; text-align: left; }
-        th { background: rgba(51, 65, 85, 0.3); color: #94a3b8; font-size: 0.875rem; font-weight: 600; }
+        th {
+            background: rgba(51, 65, 85, 0.3);
+            color: #94a3b8;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
         tr { border-top: 1px solid rgba(51, 65, 85, 0.5); }
         tr:hover { background: rgba(51, 65, 85, 0.2); }
+
         .empty-state {
             text-align: center;
             padding: 4rem 2rem;
@@ -106,11 +135,11 @@
             border: 1px solid #334155;
             border-radius: 12px;
         }
+
         .hidden { display: none; }
-        .purchase-form { padding: 1.5rem; border-bottom: 1px solid #334155; background: rgba(51, 65, 85, 0.3); }
-        input[type="number"]::-webkit-inner-spin-button { opacity: 1; }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -118,6 +147,7 @@
             <p class="subtitle">Track your investments and net worth</p>
         </div>
 
+        <!-- Stats -->
         <div class="stats" id="stats">
             <div class="stat-card">
                 <div class="stat-label">Total Invested</div>
@@ -134,10 +164,16 @@
             </div>
         </div>
 
-        <div style="margin-bottom: 1.5rem;">
-            <button class="btn btn-primary" onclick="toggleForm()">+ Add Investment</button>
+        <!-- Add investment button -->
+        <button class="btn btn-primary" onclick="toggleForm()">+ Add Investment</button>
+
+        <!-- Action bar -->
+        <div style="margin: 1rem 0; display:flex; gap:1rem;">
+            <button id="shareBtn" class="btn btn-blue hidden" onclick="sharePortfolio()">Share</button>
+            <button id="bookmarkBtn" class="btn btn-secondary hidden" onclick="bookmarkPage()">Bookmark</button>
         </div>
 
+        <!-- Add Form -->
         <div id="addForm" class="form-card hidden">
             <h3 style="margin-bottom: 1rem;">Add New Investment</h3>
             <div class="form-grid">
@@ -158,17 +194,20 @@
                     <input type="number" class="form-input" id="currentValue" placeholder="150000">
                 </div>
             </div>
+
             <div style="display: flex; gap: 0.5rem;">
                 <button class="btn btn-primary" onclick="addInvestment()">Add Investment</button>
                 <button class="btn btn-secondary" onclick="toggleForm()">Cancel</button>
             </div>
         </div>
 
+        <!-- Investments Container -->
         <div id="investments"></div>
 
+        <!-- Empty State -->
         <div id="emptyState" class="empty-state">
             <p style="font-size: 1.25rem; color: #94a3b8; margin-bottom: 0.5rem;">No investments yet</p>
-            <p style="color: #64748b;">Click "Add Investment" to start tracking your net worth</p>
+            <p style="color: #64748b;">Click “Add Investment” to start tracking your net worth</p>
         </div>
     </div>
 
@@ -196,8 +235,7 @@
             Object.entries(investments).forEach(([key, data]) => {
                 params.set(key, encodeURIComponent(JSON.stringify(data)));
             });
-            const newUrl = `${window.location.pathname}?${params.toString()}`;
-            window.history.replaceState({}, '', newUrl);
+            window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
         }
 
         function formatCurrency(amount) {
@@ -242,15 +280,17 @@
             }
 
             investments[key] = {
-                name: name,
-                currentValue: currentValue,
-                purchases: [{ amount: amount, date: date, id: Date.now() }]
+                name,
+                currentValue,
+                purchases: [{ amount, date, id: Date.now() }]
             };
 
+            // Reset
             document.getElementById('investmentName').value = '';
             document.getElementById('amount').value = '';
             document.getElementById('date').value = getTodayDate();
             document.getElementById('currentValue').value = '';
+
             toggleForm();
             saveToURL();
             render();
@@ -265,10 +305,12 @@
         }
 
         function deletePurchase(invKey, purchaseId) {
-            investments[invKey].purchases = investments[invKey].purchases.filter(p => p.id !== purchaseId);
-            if (investments[invKey].purchases.length === 0) {
+            investments[invKey].purchases =
+                investments[invKey].purchases.filter(p => p.id !== purchaseId);
+
+            if (investments[invKey].purchases.length === 0)
                 delete investments[invKey];
-            }
+
             saveToURL();
             render();
         }
@@ -291,13 +333,14 @@
             }
 
             investments[key].purchases.push({
-                amount: amount,
-                date: date,
+                amount,
+                date,
                 id: Date.now() + Math.random()
             });
 
             document.getElementById(`purchase-amount-${key}`).value = '';
             document.getElementById(`purchase-date-${key}`).value = getTodayDate();
+
             togglePurchaseForm(key);
             saveToURL();
             render();
@@ -307,11 +350,12 @@
             const inv = investments[key];
             const newName = prompt('Investment Name:', inv.name);
             if (newName === null) return;
-            
+
             const newValue = prompt('Current Value (₹):', inv.currentValue);
             if (newValue === null) return;
 
             const newKey = newName.toLowerCase().replace(/\s+/g, '_');
+
             if (newKey !== key && investments[newKey]) {
                 alert('Investment with this name already exists');
                 return;
@@ -329,6 +373,32 @@
             render();
         }
 
+        function editPurchase(invKey, purchaseId) {
+            const purchase = investments[invKey].purchases.find(p => p.id === purchaseId);
+            if (!purchase) return;
+
+            const newAmount = prompt('Purchase Amount (₹):', purchase.amount);
+            if (newAmount === null) return;
+
+            const newDate = prompt('Purchase Date (YYYY-MM-DD):', purchase.date);
+            if (newDate === null) return;
+
+            purchase.amount = parseFloat(newAmount);
+            purchase.date = newDate;
+
+            saveToURL();
+            render();
+        }
+
+        function sharePortfolio() {
+            navigator.clipboard.writeText(window.location.href);
+            alert('URL copied to clipboard!');
+        }
+
+        function bookmarkPage() {
+            alert('Press Ctrl+D (Cmd+D on Mac) to bookmark this page.');
+        }
+
         function render() {
             let totalInvested = 0;
             let totalCurrent = 0;
@@ -340,31 +410,42 @@
             });
 
             const totalReturns = totalCurrent - totalInvested;
-            const percentage = totalInvested > 0 ? ((totalReturns / totalInvested) * 100).toFixed(2) : 0;
+            const percentage =
+                totalInvested > 0 ? ((totalReturns / totalInvested) * 100).toFixed(2) : 0;
 
             document.getElementById('totalInvested').textContent = formatCurrency(totalInvested);
             document.getElementById('totalCurrent').textContent = formatCurrency(totalCurrent);
             document.getElementById('totalReturns').textContent = formatCurrency(totalReturns);
-            document.getElementById('totalReturns').className = `stat-value ${totalReturns >= 0 ? 'positive' : 'negative'}`;
-            document.getElementById('totalReturnsPercent').textContent = `${totalReturns >= 0 ? '+' : ''}${percentage}%`;
-            document.getElementById('totalReturnsPercent').className = `stat-label ${totalReturns >= 0 ? 'positive' : 'negative'}`;
+            document.getElementById('totalReturns').className =
+                `stat-value ${totalReturns >= 0 ? 'positive' : 'negative'}`;
+            document.getElementById('totalReturnsPercent').textContent =
+                `${totalReturns >= 0 ? '+' : ''}${percentage}%`;
+            document.getElementById('totalReturnsPercent').className =
+                `stat-label ${totalReturns >= 0 ? 'positive' : 'negative'}`;
 
             const container = document.getElementById('investments');
             const empty = document.getElementById('emptyState');
 
-            if (Object.keys(investments).length === 0) {
+            const hasInvestments = Object.keys(investments).length > 0;
+
+            document.getElementById('shareBtn').classList.toggle('hidden', !hasInvestments);
+            document.getElementById('bookmarkBtn').classList.toggle('hidden', !hasInvestments);
+
+            if (!hasInvestments) {
                 container.innerHTML = '';
                 empty.classList.remove('hidden');
                 return;
             }
 
             empty.classList.add('hidden');
-            container.innerHTML = Object.entries(investments).map(([key, inv]) => {
-                const invested = inv.purchases.reduce((sum, p) => sum + p.amount, 0);
-                const returns = inv.currentValue - invested;
-                const pct = invested > 0 ? ((returns / invested) * 100).toFixed(2) : 0;
 
-                return `
+            container.innerHTML = Object.entries(investments)
+                .map(([key, inv]) => {
+                    const invested = inv.purchases.reduce((sum, p) => sum + p.amount, 0);
+                    const returns = inv.currentValue - invested;
+                    const pct = invested > 0 ? ((returns / invested) * 100).toFixed(2) : 0;
+
+                    return `
                     <div class="investment-card">
                         <div class="investment-header">
                             <div style="flex: 1;">
@@ -397,13 +478,15 @@
                                 <button class="btn btn-danger" onclick="deleteInvestment('${key}')">🗑️</button>
                             </div>
                         </div>
+
                         <div style="padding: 1.5rem; border-bottom: 1px solid #334155;">
-                            <button class="btn btn-primary" onclick="togglePurchaseForm('${key}')">+ Add Purchase</button>
+                            <button class="btn btn-secondary" onclick="togglePurchaseForm('${key}')">+ Add Purchase</button>
+
                             <div id="purchase-form-${key}" class="hidden" style="margin-top: 1rem;">
                                 <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem; align-items: end;">
                                     <div class="form-group">
                                         <label class="form-label">Amount (₹)</label>
-                                        <input type="number" class="form-input" id="purchase-amount-${key}" placeholder="50000">
+                                        <input type="number" class="form-input" id="purchase-amount-${key}">
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Date</label>
@@ -416,29 +499,31 @@
                                 </div>
                             </div>
                         </div>
+
                         <table>
                             <thead>
                                 <tr>
                                     <th>Purchase Date</th>
-                                    <th style="text-align: right;">Amount Invested</th>
-                                    <th style="text-align: center;">Action</th>
+                                    <th style="text-align:right;">Amount Invested</th>
+                                    <th style="text-align:center;">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${inv.purchases.map(p => `
                                     <tr>
                                         <td>${formatDate(p.date)}</td>
-                                        <td style="text-align: right; font-weight: 600;">${formatCurrency(p.amount)}</td>
-                                        <td style="text-align: center;">
-                                            <button class="btn btn-danger" onclick="deletePurchase('${key}', ${p.id})">🗑️</button>
+                                        <td style="text-align:right; font-weight:600;">${formatCurrency(p.amount)}</td>
+                                        <td style="text-align:center;">
+                                            <button class="btn btn-edit" onclick="editPurchase('${key}', ${p.id})" style="padding: 0.25rem 0.5rem;">✏️</button>
+                                            <button class="btn btn-danger" onclick="deletePurchase('${key}', ${p.id})" style="padding: 0.25rem 0.5rem;">🗑️</button>
                                         </td>
                                     </tr>
                                 `).join('')}
                             </tbody>
                         </table>
                     </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
         }
 
         document.getElementById('date').value = getTodayDate();
