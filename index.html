@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Net Worth Tracker</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="module">
+        import React, { useState, useEffect } from 'react';
+import { PlusCircle, Trash2, TrendingUp, DollarSign, Share2, Edit2, Save, X, Bookmark } from 'lucide-react';
+
+export default function NetWorthTracker() {
+  const [investments, setInvestments] = useState({});
+  const [showForm, setShowForm] = useState(false);
+  const [editingValue, setEditingValue] = useState(null);
+  const [addingPurchaseTo, setAddingPurchaseTo] = useState(null);
+  const [editingInvestment, setEditingInvestment] = useState(null);
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
+  const [formData, setFormData] = useState({
+    investmentName: '',
+    amount: '',
+    date: getTodayDate(),
+    currentValue: ''
+  });
+  const [purchaseFormData, setPurchaseFormData] = useState({
+    amount: '',
+    date: getTodayDate()
+  });
+
+  // Parse URL on component mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const investmentsData = {};
+    
+    urlParams.forEach((value, key) => {
+      try {
+        const decoded = JSON.parse(decodeURIComponent(value));
+        investmentsData[key] = decoded;
+      } catch (e) {
+        console.error('Error parsing investment:', e);
+      }
+    });
+    
+    if (Object.keys(investmentsData).length > 0) {
+      setInvestments(investmentsData);
+    }
+  }, []);
+
+  // Update URL whenever investments change
+  useEffect(() => {
+    if (Object.keys(investments).length === 0) return;
+    
+    const params = new URLSearchParams();
+    Object.entries(investments).forEach(([name, data]) => {
+      params.set(name, encodeURIComponent(JSON.stringify(data)));
+    });
+    
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', newUrl);
+  }, [investments]);
+
+  const handleAddInvestment = () => {
+    if (!formData.investmentName || !formData.amount || !formData.date || !formData.currentValue) {
+      alert('Please fill all fields');
+      return;
+    }
+
+    const investmentKey = formData.investmentName.toLowerCase().replace(/\s+/g, '_');
+    
+    if (investments[investmentKey]) {
+      alert('Investment with this name already exists');
+      return;
+    }
+
+    const newInvestment = {
+      name: formData.investmentName,
+      currentValue: parseFloat(formData.currentValue),
+      purchases: [{
+        amount: parseFloat(formData.amount),
+        date: formData.date,
+        id: Date.now()
+      }]
+    };
+
+    setInvestments({
+      ...investments,
+      [investmentKey]: newInvestment
+    });
+
+    setFormData({ investmentName: '', amount: '', date: getTodayDate(), currentValue: '' });
+    setShowForm(false);
+  };
+
+  const handleAddPurchase = (investmentKey) => {
+    if (!purchaseFormData.amount || !purchaseFormData.date) {
+      alert('Please fill amount and date');
+      return;
+    }
+
+    const investment = investments[investmentKey];
+    const newPurchase = {
+      amount: parseFloat(purchaseFormData.amount),
+      date: purchaseFormData.date,
+      id: Date.now()
+    };
+
+    setInvestments({
+      ...investments,
+      [investmentKey]: {
+        ...investment,
+        purchases: [...investment.purchases, newPurchase]
+      }
+    });
+
+    setPurchaseFormData({ amount: '', date: getTodayDate() });
+    setAddingPurchaseTo(null);
+  };
+
+  const handleUpdateCurrentValue = (investmentKey, newValue) => {
+    setInvestments({
+      ...investments,
+      [investmentKey]: {
+        ...investments[investmentKey],
+        currentValue: parseFloat(newValue) || 0
+      }
+    });
+    setEditingValue(null);
+  };
+
+  const handleDeleteInvestment = (investmentKey) => {
+    const newInvestments = { ...investments };
+    delete newInvestments[investmentKey];
+    setInvestments(newInvestments);
+  };
+
+  const handleDeletePurchase = (investmentKey, purchaseId) => {
+    const investment = investments[investmentKey];
+    const newPurchases = investment.purchases.filter(p => p.id !== purchaseId);
+    
+    if (newPurchases.length === 0) {
+      handleDeleteInvestment(investmentKey);
+    } else {
+      setInvestments({
+        ...investments,
+        [investmentKey]: {
+          ...investment,
+          purchases: newPurchases
+        }
+      });
+    }
+  };
+
+  const handleEditInvestment = (investmentKey) => {
+    const investment = investments[investmentKey];
+    setEditingInvestment({
+      key: investmentKey,
+      name: investment.name,
+      currentValue: investment.currentValue
+    });
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingInvestment.name) {
+      alert('Investment name cannot be empty');
+      return;
+    }
+
+    const oldKey = editingInvestment.key;
+    const newKey = editingInvestment.name.toLowerCase().replace(/\s+/g, '_');
+    
+    // Check if name changed and new name already exists
+    if (oldKey !== newKey && investments[newKey]) {
+      alert('Investment with this name already exists');
+      return;
+    }
+
+    const updatedInvestment = {
+      ...investments[oldKey],
+      name: editingInvestment.name,
+      currentValue: parseFloat(editingInvestment.currentValue) || 0
+    };
+
+    const newInvestments = { ...investments };
+    
+    // If key changed, delete old and add new
+    if (oldKey !== newKey) {
+      delete newInvestments[oldKey];
+      newInvestments[newKey] = updatedInvestment;
+    } else {
+      newInvestments[oldKey] = updatedInvestment;
+    }
+
+    setInvestments(newInvestments);
+    setEditingInvestment(null);
+  };
+
+  const calculateStats = () => {
+    let totalInvested = 0;
+    let totalCurrent = 0;
+
+    Object.values(investments).forEach(inv => {
+      if (inv.purchases && Array.isArray(inv.purchases)) {
+        const invested = inv.purchases.reduce((sum, p) => sum + p.amount, 0);
+        totalInvested += invested;
+        totalCurrent += inv.currentValue || 0;
+      }
+    });
+
+    const totalReturns = totalCurrent - totalInvested;
+    const totalReturnsPercentage = totalInvested > 0 ? ((totalReturns / totalInvested) * 100).toFixed(2) : 0;
+
+    return { totalInvested, totalCurrent, totalReturns, totalReturnsPercentage };
+  };
+
+  const stats = calculateStats();
+
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    alert('URL copied to clipboard! Share it to show your portfolio.');
+  };
+
+  const handleBookmark = () => {
+    const url = window.location.href;
+    const title = 'My Net Worth Portfolio';
+    
+    // Try to use the Bookmark API (only works in some browsers)
+    if (window.sidebar && window.sidebar.addPanel) {
+      // Firefox
+      window.sidebar.addPanel(title, url, '');
+    } else if (window.external && ('AddFavorite' in window.external)) {
+      // IE
+      window.external.AddFavorite(url, title);
+    } else {
+      // For most modern browsers, show instructions
+      alert('Press Ctrl+D (Cmd+D on Mac) to bookmark this page and save your portfolio!');
+    }
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-4 md:p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+            Net Worth Tracker
+          </h1>
+          <p className="text-slate-400">Track multiple purchases per investment with one current value</p>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="bg-slate-800/50 backdrop-blur rounded-xl p-6 border border-slate-700">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-slate-400 text-sm">Total Invested</span>
+              <DollarSign className="w-5 h-5 text-blue-400" />
+            </div>
+            <p className="text-2xl font-bold">{formatCurrency(stats.totalInvested)}</p>
+          </div>
+
+          <div className="bg-slate-800/50 backdrop-blur rounded-xl p-6 border border-slate-700">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-slate-400 text-sm">Current Value</span>
+              <TrendingUp className="w-5 h-5 text-emerald-400" />
+            </div>
+            <p className="text-2xl font-bold">{formatCurrency(stats.totalCurrent)}</p>
+          </div>
+
+          <div className="bg-slate-800/50 backdrop-blur rounded-xl p-6 border border-slate-700">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-slate-400 text-sm">Total Returns</span>
+              <TrendingUp className="w-5 h-5 text-cyan-400" />
+            </div>
+            <p className={`text-2xl font-bold ${stats.totalReturns >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {formatCurrency(stats.totalReturns)}
+            </p>
+            <p className={`text-sm ${stats.totalReturns >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {stats.totalReturns >= 0 ? '+' : ''}{stats.totalReturnsPercentage}%
+            </p>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-3 mb-6 flex-wrap">
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 px-6 py-3 rounded-lg font-semibold transition-colors"
+          >
+            <PlusCircle className="w-5 h-5" />
+            Add Investment
+          </button>
+          {Object.keys(investments).length > 0 && (
+            <>
+              <button
+                onClick={handleShare}
+                className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 px-6 py-3 rounded-lg font-semibold transition-colors"
+              >
+                <Share2 className="w-5 h-5" />
+                Share Portfolio
+              </button>
+              <button
+                onClick={handleBookmark}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-semibold transition-colors"
+              >
+                <Bookmark className="w-5 h-5" />
+                Bookmark
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Add Investment Form */}
+        {showForm && (
+          <div className="bg-slate-800/50 backdrop-blur rounded-xl p-6 border border-slate-700 mb-6">
+            <h3 className="text-xl font-semibold mb-4">Add New Investment</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">Investment Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g., Gold, Land, Stocks"
+                  value={formData.investmentName}
+                  onChange={(e) => setFormData({ ...formData, investmentName: e.target.value })}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">First Purchase Amount (₹)</label>
+                <input
+                  type="number"
+                  placeholder="100000"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">Purchase Date</label>
+                <input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">Current Value (₹)</label>
+                <input
+                  type="number"
+                  placeholder="150000"
+                  value={formData.currentValue}
+                  onChange={(e) => setFormData({ ...formData, currentValue: e.target.value })}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleAddInvestment}
+                className="bg-emerald-600 hover:bg-emerald-700 px-6 py-2 rounded-lg font-semibold transition-colors"
+              >
+                Add Investment
+              </button>
+              <button
+                onClick={() => {
+                  setShowForm(false);
+                  setFormData({ investmentName: '', amount: '', date: getTodayDate(), currentValue: '' });
+                }}
+                className="bg-slate-700 hover:bg-slate-600 px-6 py-2 rounded-lg font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Investments Display */}
+        {Object.keys(investments).length > 0 ? (
+          <div className="space-y-6">
+            {Object.entries(investments).map(([key, investment]) => {
+              if (!investment.purchases || !Array.isArray(investment.purchases)) return null;
+              
+              const totalInvested = investment.purchases.reduce((sum, p) => sum + (p.amount || 0), 0);
+              const returns = (investment.currentValue || 0) - totalInvested;
+              const percentage = totalInvested > 0 ? ((returns / totalInvested) * 100).toFixed(2) : 0;
+
+              const isEditing = editingInvestment?.key === key;
+
+              return (
+                <div key={key} className="bg-slate-800/50 backdrop-blur rounded-xl border border-slate-700 overflow-hidden">
+                  <div className="p-6 border-b border-slate-700">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        {isEditing ? (
+                          <div className="mb-4">
+                            <input
+                              type="text"
+                              value={editingInvestment.name}
+                              onChange={(e) => setEditingInvestment({ ...editingInvestment, name: e.target.value })}
+                              className="text-2xl font-bold bg-slate-700 border border-slate-600 rounded-lg px-3 py-1 mb-3 focus:outline-none focus:border-emerald-500"
+                            />
+                          </div>
+                        ) : (
+                          <h3 className="text-2xl font-bold mb-3">{investment.name}</h3>
+                        )}
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                          <div>
+                            <p className="text-slate-400 text-xs mb-1">Total Invested</p>
+                            <p className="font-semibold">{formatCurrency(totalInvested)}</p>
+                          </div>
+                          <div>
+                            <p className="text-slate-400 text-xs mb-1">Current Value</p>
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                value={editingInvestment.currentValue}
+                                onChange={(e) => setEditingInvestment({ ...editingInvestment, currentValue: e.target.value })}
+                                className="w-32 bg-slate-700 border border-slate-600 rounded px-2 py-1 text-sm focus:outline-none focus:border-emerald-500"
+                              />
+                            ) : (
+                              <p className="font-semibold">{formatCurrency(investment.currentValue)}</p>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-slate-400 text-xs mb-1">Returns</p>
+                            <p className={`font-semibold ${returns >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {returns >= 0 ? '+' : ''}{formatCurrency(returns)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-slate-400 text-xs mb-1">Return %</p>
+                            <p className={`font-semibold ${returns >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {returns >= 0 ? '+' : ''}{percentage}%
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2 ml-4">
+                        {isEditing ? (
+                          <>
+                            <button
+                              onClick={handleSaveEdit}
+                              className="text-emerald-400 hover:text-emerald-300 transition-colors"
+                            >
+                              <Save className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => setEditingInvestment(null)}
+                              className="text-slate-400 hover:text-slate-300 transition-colors"
+                            >
+                              <X className="w-5 h-5" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleEditInvestment(key)}
+                              className="text-blue-400 hover:text-blue-300 transition-colors"
+                            >
+                              <Edit2 className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteInvestment(key)}
+                              className="text-red-400 hover:text-red-300 transition-colors"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-6 border-b border-slate-700">
+                    <button
+                      onClick={() => setAddingPurchaseTo(addingPurchaseTo === key ? null : key)}
+                      className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 transition-colors"
+                    >
+                      <PlusCircle className="w-4 h-4" />
+                      Add Purchase
+                    </button>
+
+                    {addingPurchaseTo === key && (
+                      <div className="mt-4 p-4 bg-slate-700/30 rounded-lg">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1">Amount (₹)</label>
+                            <input
+                              type="number"
+                              placeholder="50000"
+                              value={purchaseFormData.amount}
+                              onChange={(e) => setPurchaseFormData({ ...purchaseFormData, amount: e.target.value })}
+                              className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1">Date</label>
+                            <input
+                              type="date"
+                              value={purchaseFormData.date}
+                              onChange={(e) => setPurchaseFormData({ ...purchaseFormData, date: e.target.value })}
+                              className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2 mt-3">
+                          <button
+                            onClick={() => handleAddPurchase(key)}
+                            className="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded text-sm font-semibold transition-colors"
+                          >
+                            Add
+                          </button>
+                          <button
+                            onClick={() => {
+                              setAddingPurchaseTo(null);
+                              setPurchaseFormData({ amount: '', date: getTodayDate() });
+                            }}
+                            className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded text-sm font-semibold transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-slate-700/30">
+                          <th className="text-left p-4 text-slate-400 text-sm font-semibold">Purchase Date</th>
+                          <th className="text-right p-4 text-slate-400 text-sm font-semibold">Amount Invested</th>
+                          <th className="text-center p-4 text-slate-400 text-sm font-semibold">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {investment.purchases.map((purchase) => (
+                          <tr key={purchase.id} className="border-t border-slate-700/50 hover:bg-slate-700/20">
+                            <td className="p-4 text-slate-300">{formatDate(purchase.date)}</td>
+                            <td className="p-4 text-right font-semibold">{formatCurrency(purchase.amount)}</td>
+                            <td className="p-4 text-center">
+                              <button
+                                onClick={() => handleDeletePurchase(key, purchase.id)}
+                                className="text-red-400 hover:text-red-300 transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4 inline" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-16 bg-slate-800/50 backdrop-blur rounded-xl border border-slate-700">
+            <DollarSign className="w-16 h-16 text-slate-600 mx-auto mb-4" />
+            <p className="text-slate-400 text-lg mb-2">No investments yet</p>
+            <p className="text-slate-500">Click "Add Investment" to start tracking your net worth</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+    </script>
+</body>
+</html>
