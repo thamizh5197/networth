@@ -275,7 +275,8 @@
 
         <!-- Action bar -->
         <div style="margin: 1rem 0; display:flex; gap:1rem;">
-            <button id="shareBtn" class="btn btn-blue hidden" onclick="sharePortfolio()">📤 Share</button>
+            <button id="shareBtn" class="btn btn-blue" onclick="sharePortfolio()">📤 Share</button>
+            <button id="bookmarkBtn" class="btn btn-secondary" onclick="bookmarkPage()">🔖 Bookmark</button>
         </div>
 
         <!-- Add Form -->
@@ -617,6 +618,55 @@
             alert('URL copied to clipboard! Share this link to view your portfolio.');
         }
 
+        function bookmarkPage() {
+            const pageTitle = 'My Net Worth Tracker';
+            const pageUrl = window.location.href;
+
+            // Try the Bookmark API (if supported)
+            if ('addBookmark' in window) {
+                try {
+                    window.addBookmark(pageUrl, pageTitle);
+                    alert('✅ Bookmark saved/updated!');
+                    return;
+                } catch (e) {
+                    console.log('addBookmark not supported');
+                }
+            }
+
+            // Try Firefox method
+            if (window.sidebar && window.sidebar.addPanel) {
+                try {
+                    window.sidebar.addPanel(pageTitle, pageUrl, '');
+                    alert('✅ Bookmark saved/updated in Firefox!');
+                    return;
+                } catch (e) {
+                    console.log('Firefox bookmark failed');
+                }
+            }
+
+            // Try IE/Edge legacy method
+            if (window.external && ('AddFavorite' in window.external)) {
+                try {
+                    window.external.AddFavorite(pageUrl, pageTitle);
+                    alert('✅ Bookmark saved/updated!');
+                    return;
+                } catch (e) {
+                    console.log('IE/Edge bookmark failed');
+                }
+            }
+
+            // For modern browsers, create a more helpful dialog
+            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+            const shortcut = isMac ? '⌘ Cmd+D' : 'Ctrl+D';
+            
+            // Copy URL first
+            navigator.clipboard.writeText(pageUrl).then(() => {
+                alert(`🔖 To bookmark/update this page:\n\n1. Press ${shortcut}\n2. Confirm the bookmark\n\n💡 Your URL has been copied to clipboard!\n\nBookmarking will save all your current data. When you update investments and bookmark again, it will UPDATE your existing bookmark with the new data.`);
+            }).catch(() => {
+                alert(`🔖 To bookmark/update this page:\n\nPress ${shortcut} and confirm\n\nThis will save all your current data and UPDATE any existing bookmark!`);
+            });
+        }
+
         function openGoalModal() {
             if (goal) {
                 document.getElementById('goalInput').value = goal;
@@ -757,8 +807,6 @@
             const empty = document.getElementById('emptyState');
 
             const hasInvestments = Object.keys(investments).length > 0;
-
-            document.getElementById('shareBtn').classList.toggle('hidden', !hasInvestments);
 
             if (!hasInvestments) {
                 container.innerHTML = '';
