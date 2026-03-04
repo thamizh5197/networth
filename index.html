@@ -74,6 +74,17 @@
                     <input type="text" class="form-input" id="investmentName" placeholder="e.g., Gold, Land">
                 </div>
                 <div class="form-group">
+                    <label class="form-label">Type</label>
+                    <select class="form-input" id="investmentType" onchange="toggleInvestmentType()">
+                        <option value="regular">Regular (₹)</option>
+                        <option value="unit">Unit-based (grams, shares, etc.)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Regular fields -->
+            <div id="regularFields" class="form-grid">
+                <div class="form-group">
                     <label class="form-label">First Purchase Amount (₹)</label>
                     <input type="number" class="form-input" id="amount" placeholder="100000">
                 </div>
@@ -87,7 +98,31 @@
                 </div>
             </div>
 
-            <div style="display: flex; gap: 0.5rem;">
+            <!-- Unit-based fields -->
+            <div id="unitFields" class="form-grid hidden">
+                <div class="form-group">
+                    <label class="form-label">Unit Label (e.g., g, shares)</label>
+                    <input type="text" class="form-input" id="unitLabel" placeholder="g">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Units Purchased</label>
+                    <input type="number" class="form-input" id="unitAmount" placeholder="10" step="any">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Price per Unit (₹)</label>
+                    <input type="number" class="form-input" id="unitPrice" placeholder="7000" step="any">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Purchase Date</label>
+                    <input type="date" class="form-input" id="unitDate">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Current Rate per Unit (₹)</label>
+                    <input type="number" class="form-input" id="unitCurrentRate" placeholder="9000" step="any">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
                 <button class="btn btn-primary" onclick="addInvestment()">Add Investment</button>
                 <button class="btn btn-secondary" onclick="toggleForm()">Cancel</button>
             </div>
@@ -172,9 +207,9 @@
                 <label class="form-label">Investment Name</label>
                 <input type="text" class="form-input" id="editInvestmentName">
             </div>
-            <div class="form-group" style="margin-top: 1rem;">
-                <label class="form-label">Current Value (₹)</label>
-                <input type="number" class="form-input" id="editInvestmentValue">
+            <div class="form-group" style="margin-top: 1rem;" id="editValueGroup">
+                <label class="form-label" id="editValueLabel">Current Value (₹)</label>
+                <input type="number" class="form-input" id="editInvestmentValue" step="any">
             </div>
             <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
                 <button class="btn btn-primary" onclick="saveEditInvestment()">Save Changes</button>
@@ -190,9 +225,23 @@
                 <h2 class="modal-title">Edit Purchase</h2>
                 <button class="modal-close" onclick="closeEditPurchaseModal()">×</button>
             </div>
-            <div class="form-group">
-                <label class="form-label">Amount (₹)</label>
-                <input type="number" class="form-input" id="editPurchaseAmount">
+            <!-- Regular fields -->
+            <div id="editPurchaseRegularFields">
+                <div class="form-group">
+                    <label class="form-label">Amount (₹)</label>
+                    <input type="number" class="form-input" id="editPurchaseAmount">
+                </div>
+            </div>
+            <!-- Unit-based fields -->
+            <div id="editPurchaseUnitFields" class="hidden">
+                <div class="form-group">
+                    <label class="form-label" id="editPurchaseUnitsLabel">Units</label>
+                    <input type="number" class="form-input" id="editPurchaseUnits" step="any">
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label class="form-label" id="editPurchasePriceLabel">Price per unit (₹)</label>
+                    <input type="number" class="form-input" id="editPurchasePrice" step="any">
+                </div>
             </div>
             <div class="form-group" style="margin-top: 1rem;">
                 <label class="form-label">Date</label>

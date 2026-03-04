@@ -61,36 +61,66 @@ function toggleForm() {
     form.classList.toggle('hidden');
     if (!form.classList.contains('hidden')) {
         document.getElementById('date').value = getTodayDate();
+        document.getElementById('unitDate').value = getTodayDate();
+        document.getElementById('investmentType').value = 'regular';
+        toggleInvestmentType();
     }
 }
 
-function addInvestment() {
-    const name = document.getElementById('investmentName').value;
-    const amount = parseFloat(document.getElementById('amount').value);
-    const date = document.getElementById('date').value;
-    const currentValue = parseFloat(document.getElementById('currentValue').value);
+function toggleInvestmentType() {
+    const type = document.getElementById('investmentType').value;
+    document.getElementById('regularFields').classList.toggle('hidden', type !== 'regular');
+    document.getElementById('unitFields').classList.toggle('hidden', type !== 'unit');
+}
 
-    if (!name || !amount || !date || !currentValue) {
-        alert('Please fill all fields');
-        return;
-    }
+function addInvestment() {
+    const name = document.getElementById('investmentName').value.trim();
+    const type = document.getElementById('investmentType').value;
+
+    if (!name) { alert('Please enter investment name'); return; }
 
     const key = name.toLowerCase().replace(/\s+/g, '_');
-    if (investments[key]) {
-        alert('Investment with this name already exists');
-        return;
+    if (investments[key]) { alert('Investment with this name already exists'); return; }
+
+    if (type === 'regular') {
+        const amount = parseFloat(document.getElementById('amount').value);
+        const date = document.getElementById('date').value;
+        const currentValue = parseFloat(document.getElementById('currentValue').value);
+
+        if (!amount || !date || !currentValue) { alert('Please fill all fields'); return; }
+
+        investments[key] = {
+            name, type: 'regular',
+            currentValue,
+            purchases: [{ amount, date, id: Date.now() }]
+        };
+
+        document.getElementById('amount').value = '';
+        document.getElementById('currentValue').value = '';
+    } else {
+        const unitLabel = document.getElementById('unitLabel').value.trim() || 'units';
+        const units = parseFloat(document.getElementById('unitAmount').value);
+        const pricePerUnit = parseFloat(document.getElementById('unitPrice').value);
+        const date = document.getElementById('unitDate').value;
+        const currentRate = parseFloat(document.getElementById('unitCurrentRate').value);
+
+        if (!units || !pricePerUnit || !date || !currentRate) { alert('Please fill all fields'); return; }
+
+        investments[key] = {
+            name, type: 'unit', unitLabel,
+            currentRate,
+            purchases: [{ units, pricePerUnit, amount: units * pricePerUnit, date, id: Date.now() }]
+        };
+
+        document.getElementById('unitLabel').value = '';
+        document.getElementById('unitAmount').value = '';
+        document.getElementById('unitPrice').value = '';
+        document.getElementById('unitCurrentRate').value = '';
     }
 
-    investments[key] = {
-        name,
-        currentValue,
-        purchases: [{ amount, date, id: Date.now() }]
-    };
-
     document.getElementById('investmentName').value = '';
-    document.getElementById('amount').value = '';
     document.getElementById('date').value = getTodayDate();
-    document.getElementById('currentValue').value = '';
+    document.getElementById('unitDate').value = getTodayDate();
 
     toggleForm();
     saveToURL();
@@ -125,22 +155,23 @@ function togglePurchaseForm(key) {
 }
 
 function addPurchase(key) {
-    const amount = parseFloat(document.getElementById(`purchase-amount-${key}`).value);
+    const inv = investments[key];
     const date = document.getElementById(`purchase-date-${key}`).value;
 
-    if (!amount || !date) {
-        alert('Please fill amount and date');
-        return;
+    if (inv.type === 'unit') {
+        const units = parseFloat(document.getElementById(`purchase-units-${key}`).value);
+        const pricePerUnit = parseFloat(document.getElementById(`purchase-price-${key}`).value);
+
+        if (!units || !pricePerUnit || !date) { alert('Please fill all fields'); return; }
+
+        inv.purchases.push({ units, pricePerUnit, amount: units * pricePerUnit, date, id: Date.now() + Math.random() });
+    } else {
+        const amount = parseFloat(document.getElementById(`purchase-amount-${key}`).value);
+
+        if (!amount || !date) { alert('Please fill amount and date'); return; }
+
+        inv.purchases.push({ amount, date, id: Date.now() + Math.random() });
     }
-
-    investments[key].purchases.push({
-        amount,
-        date,
-        id: Date.now() + Math.random()
-    });
-
-    document.getElementById(`purchase-amount-${key}`).value = '';
-    document.getElementById(`purchase-date-${key}`).value = getTodayDate();
 
     togglePurchaseForm(key);
     saveToURL();
@@ -150,9 +181,15 @@ function addPurchase(key) {
 function editInvestment(key) {
     const inv = investments[key];
     editingInvestment = key;
-    
+
     document.getElementById('editInvestmentName').value = inv.name;
-    document.getElementById('editInvestmentValue').value = inv.currentValue;
+    if (inv.type === 'unit') {
+        document.getElementById('editValueLabel').textContent = `Current Rate per ${inv.unitLabel} (₹)`;
+        document.getElementById('editInvestmentValue').value = inv.currentRate;
+    } else {
+        document.getElementById('editValueLabel').textContent = 'Current Value (₹)';
+        document.getElementById('editInvestmentValue').value = inv.currentValue;
+    }
     document.getElementById('editInvestmentModal').classList.add('show');
 }
 
@@ -180,16 +217,19 @@ function saveEditInvestment() {
         return;
     }
 
+    const isUnit = investments[oldKey].type === 'unit';
+
     if (newKey !== oldKey) {
-        investments[newKey] = { 
-            ...investments[oldKey], 
-            name: newName, 
-            currentValue: newValue 
-        };
+        investments[newKey] = { ...investments[oldKey], name: newName };
         delete investments[oldKey];
     } else {
         investments[oldKey].name = newName;
-        investments[oldKey].currentValue = newValue;
+    }
+
+    if (isUnit) {
+        investments[newKey || oldKey].currentRate = newValue;
+    } else {
+        investments[newKey || oldKey].currentValue = newValue;
     }
 
     saveToURL();
@@ -198,11 +238,25 @@ function saveEditInvestment() {
 }
 
 function editPurchase(invKey, purchaseId) {
-    const purchase = investments[invKey].purchases.find(p => p.id === purchaseId);
+    const inv = investments[invKey];
+    const purchase = inv.purchases.find(p => p.id === purchaseId);
     if (!purchase) return;
 
     editingPurchase = { invKey, purchaseId };
-    document.getElementById('editPurchaseAmount').value = purchase.amount;
+    const isUnit = inv.type === 'unit';
+
+    document.getElementById('editPurchaseRegularFields').classList.toggle('hidden', isUnit);
+    document.getElementById('editPurchaseUnitFields').classList.toggle('hidden', !isUnit);
+
+    if (isUnit) {
+        document.getElementById('editPurchaseUnitsLabel').textContent = `Units (${inv.unitLabel})`;
+        document.getElementById('editPurchasePriceLabel').textContent = `Price per ${inv.unitLabel} (₹)`;
+        document.getElementById('editPurchaseUnits').value = purchase.units;
+        document.getElementById('editPurchasePrice').value = purchase.pricePerUnit;
+    } else {
+        document.getElementById('editPurchaseAmount').value = purchase.amount;
+    }
+
     document.getElementById('editPurchaseDate').value = purchase.date;
     document.getElementById('editPurchaseModal').classList.add('show');
 }
@@ -215,25 +269,29 @@ function closeEditPurchaseModal() {
 function saveEditPurchase() {
     if (!editingPurchase) return;
 
-    const amount = parseFloat(document.getElementById('editPurchaseAmount').value);
+    const inv = investments[editingPurchase.invKey];
     const date = document.getElementById('editPurchaseDate').value;
+    if (!date) { alert('Please fill all fields'); return; }
 
-    if (!amount || !date) {
-        alert('Please fill all fields');
-        return;
-    }
+    const purchase = inv.purchases.find(p => p.id === editingPurchase.purchaseId);
+    if (!purchase) { closeEditPurchaseModal(); return; }
 
-    const purchase = investments[editingPurchase.invKey].purchases.find(
-        p => p.id === editingPurchase.purchaseId
-    );
-
-    if (purchase) {
+    if (inv.type === 'unit') {
+        const units = parseFloat(document.getElementById('editPurchaseUnits').value);
+        const pricePerUnit = parseFloat(document.getElementById('editPurchasePrice').value);
+        if (!units || !pricePerUnit) { alert('Please fill all fields'); return; }
+        purchase.units = units;
+        purchase.pricePerUnit = pricePerUnit;
+        purchase.amount = units * pricePerUnit;
+    } else {
+        const amount = parseFloat(document.getElementById('editPurchaseAmount').value);
+        if (!amount) { alert('Please fill all fields'); return; }
         purchase.amount = amount;
-        purchase.date = date;
-        saveToURL();
-        render();
     }
 
+    purchase.date = date;
+    saveToURL();
+    render();
     closeEditPurchaseModal();
 }
 
@@ -368,6 +426,17 @@ function calculateFire() {
     render();
 }
 
+function getTotalUnits(inv) {
+    return inv.purchases.reduce((sum, p) => sum + (p.units || 0), 0);
+}
+
+function getComputedCurrentValue(inv) {
+    if (inv.type === 'unit') {
+        return getTotalUnits(inv) * (inv.currentRate || 0);
+    }
+    return inv.currentValue || 0;
+}
+
 function render() {
     let totalInvested = 0;
     let totalCurrent = 0;
@@ -375,7 +444,7 @@ function render() {
     Object.values(investments).forEach(inv => {
         const invested = inv.purchases.reduce((sum, p) => sum + p.amount, 0);
         totalInvested += invested;
-        totalCurrent += inv.currentValue;
+        totalCurrent += getComputedCurrentValue(inv);
     });
 
     const totalReturns = totalCurrent - totalInvested;
@@ -429,14 +498,80 @@ function render() {
 
     container.innerHTML = Object.entries(investments).map(([key, inv]) => {
         const invested = inv.purchases.reduce((sum, p) => sum + p.amount, 0);
-        const returns = inv.currentValue - invested;
+        const currentValue = getComputedCurrentValue(inv);
+        const returns = currentValue - invested;
         const pct = invested > 0 ? ((returns / invested) * 100).toFixed(2) : 0;
+        const isUnit = inv.type === 'unit';
+        const totalUnits = isUnit ? getTotalUnits(inv) : 0;
+
+        const unitExtraStats = isUnit ? `
+            <div>
+                <div class="stat-label">Total ${inv.unitLabel}</div>
+                <div style="font-weight: 600;">${totalUnits.toLocaleString('en-IN')} ${inv.unitLabel}</div>
+            </div>
+            <div>
+                <div class="stat-label">Rate / ${inv.unitLabel}</div>
+                <div style="font-weight: 600;">${formatCurrency(inv.currentRate)}</div>
+            </div>
+        ` : '';
+
+        const purchaseFormFields = isUnit ? `
+            <div class="purchase-form-grid">
+                <div class="form-group">
+                    <label class="form-label">Units (${inv.unitLabel})</label>
+                    <input type="number" class="form-input" id="purchase-units-${key}" step="any">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Price / ${inv.unitLabel} (₹)</label>
+                    <input type="number" class="form-input" id="purchase-price-${key}" step="any">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-input" id="purchase-date-${key}">
+                </div>
+                <div class="form-group" style="justify-content: flex-end;">
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-primary" onclick="addPurchase('${key}')">Add</button>
+                        <button class="btn btn-secondary" onclick="togglePurchaseForm('${key}')">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        ` : `
+            <div class="purchase-form-grid">
+                <div class="form-group">
+                    <label class="form-label">Amount (₹)</label>
+                    <input type="number" class="form-input" id="purchase-amount-${key}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-input" id="purchase-date-${key}">
+                </div>
+                <div class="form-group" style="justify-content: flex-end;">
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-primary" onclick="addPurchase('${key}')">Add</button>
+                        <button class="btn btn-secondary" onclick="togglePurchaseForm('${key}')">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const tableRows = inv.purchases.sort((a, b) => new Date(b.date) - new Date(a.date)).map(p => `
+            <tr>
+                <td>${formatDate(p.date)}</td>
+                ${isUnit ? `<td style="text-align:right;">${p.units} ${inv.unitLabel} @ ${formatCurrency(p.pricePerUnit)}/${inv.unitLabel}</td>` : ''}
+                <td style="text-align:right; font-weight:600;">${formatCurrency(p.amount)}</td>
+                <td style="text-align:center;">
+                    <button class="btn btn-edit" onclick="editPurchase('${key}', ${p.id})" style="padding: 0.25rem 0.5rem;">✏️</button>
+                    <button class="btn btn-danger" onclick="deletePurchase('${key}', ${p.id})" style="padding: 0.25rem 0.5rem;">🗑️</button>
+                </td>
+            </tr>
+        `).join('');
 
         return `
         <div class="investment-card">
             <div class="investment-header">
                 <div style="flex: 1;">
-                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">${inv.name}</h3>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">${inv.name}${isUnit ? ` <span style="font-size:0.875rem; color:#94a3b8; font-weight:400;">(${inv.unitLabel})</span>` : ''}</h3>
                     <div class="investment-stats">
                         <div>
                             <div class="stat-label">Total Invested</div>
@@ -444,8 +579,9 @@ function render() {
                         </div>
                         <div>
                             <div class="stat-label">Current Value</div>
-                            <div style="font-weight: 600;">${formatCurrency(inv.currentValue)}</div>
+                            <div style="font-weight: 600;">${formatCurrency(currentValue)}</div>
                         </div>
+                        ${unitExtraStats}
                         <div>
                             <div class="stat-label">Returns</div>
                             <div style="font-weight: 600;" class="${returns >= 0 ? 'positive' : 'negative'}">
@@ -468,22 +604,8 @@ function render() {
 
             <div style="padding: 1.5rem; border-bottom: 1px solid #334155;">
                 <button class="btn btn-secondary" onclick="togglePurchaseForm('${key}')">+ Add Purchase</button>
-
                 <div id="purchase-form-${key}" class="hidden" style="margin-top: 1rem;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem; align-items: end;">
-                        <div class="form-group">
-                            <label class="form-label">Amount (₹)</label>
-                            <input type="number" class="form-input" id="purchase-amount-${key}">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Date</label>
-                            <input type="date" class="form-input" id="purchase-date-${key}">
-                        </div>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <button class="btn btn-primary" onclick="addPurchase('${key}')">Add</button>
-                            <button class="btn btn-secondary" onclick="togglePurchaseForm('${key}')">Cancel</button>
-                        </div>
-                    </div>
+                    ${purchaseFormFields}
                 </div>
             </div>
 
@@ -491,22 +613,12 @@ function render() {
                 <thead>
                     <tr>
                         <th>Purchase Date</th>
+                        ${isUnit ? `<th style="text-align:right;">Units</th>` : ''}
                         <th style="text-align:right;">Amount Invested</th>
                         <th style="text-align:center;">Actions</th>
                     </tr>
                 </thead>
-                <tbody>
-                    ${inv.purchases.sort((a, b) => new Date(b.date) - new Date(a.date)).map(p => `
-                        <tr>
-                            <td>${formatDate(p.date)}</td>
-                            <td style="text-align:right; font-weight:600;">${formatCurrency(p.amount)}</td>
-                            <td style="text-align:center;">
-                                <button class="btn btn-edit" onclick="editPurchase('${key}', ${p.id})" style="padding: 0.25rem 0.5rem;">✏️</button>
-                                <button class="btn btn-danger" onclick="deletePurchase('${key}', ${p.id})" style="padding: 0.25rem 0.5rem;">🗑️</button>
-                            </td>
-                        </tr>
-                    `).join('')}
-                </tbody>
+                <tbody>${tableRows}</tbody>
             </table>
         </div>
         `;
