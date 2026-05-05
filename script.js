@@ -295,6 +295,71 @@ function saveEditPurchase() {
     closeEditPurchaseModal();
 }
 
+function copyAsText() {
+    const lines = [];
+    const now = new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
+    lines.push(`Net Worth Summary — ${now}`);
+    lines.push('='.repeat(40));
+
+    let totalInvested = 0;
+    let totalCurrent = 0;
+
+    Object.values(investments).forEach(inv => {
+        const invested = inv.purchases.reduce((sum, p) => sum + p.amount, 0);
+        const currentValue = getComputedCurrentValue(inv);
+        const returns = currentValue - invested;
+        const pct = invested > 0 ? ((returns / invested) * 100).toFixed(1) : '0.0';
+        const isUnit = inv.type === 'unit';
+        const totalUnits = isUnit ? getTotalUnits(inv) : 0;
+
+        totalInvested += invested;
+        totalCurrent += currentValue;
+
+        lines.push('');
+        lines.push(`${inv.name}${isUnit ? ` (${inv.unitLabel})` : ''}`);
+        lines.push('-'.repeat(30));
+        if (isUnit) {
+            lines.push(`  Total: ${totalUnits} ${inv.unitLabel} @ ₹${inv.currentRate.toLocaleString('en-IN')}/${inv.unitLabel}`);
+        }
+        lines.push(`  Invested:      ${formatCurrency(invested)}`);
+        lines.push(`  Current Value: ${formatCurrency(currentValue)}`);
+        lines.push(`  Returns:       ${returns >= 0 ? '+' : ''}${formatCurrency(returns)} (${returns >= 0 ? '+' : ''}${pct}%)`);
+
+        const sorted = [...inv.purchases].sort((a, b) => new Date(b.date) - new Date(a.date));
+        lines.push(`  Purchases (${sorted.length}):`);
+        sorted.forEach(p => {
+            const dateStr = formatDate(p.date);
+            if (isUnit) {
+                lines.push(`    ${dateStr}: ${p.units} ${inv.unitLabel} @ ₹${p.pricePerUnit.toLocaleString('en-IN')} = ${formatCurrency(p.amount)}`);
+            } else {
+                lines.push(`    ${dateStr}: ${formatCurrency(p.amount)}`);
+            }
+        });
+    });
+
+    const totalReturns = totalCurrent - totalInvested;
+    const totalPct = totalInvested > 0 ? ((totalReturns / totalInvested) * 100).toFixed(1) : '0.0';
+
+    lines.push('');
+    lines.push('='.repeat(40));
+    lines.push(`Total Invested:  ${formatCurrency(totalInvested)}`);
+    lines.push(`Current Value:   ${formatCurrency(totalCurrent)}`);
+    lines.push(`Total Returns:   ${totalReturns >= 0 ? '+' : ''}${formatCurrency(totalReturns)} (${totalReturns >= 0 ? '+' : ''}${totalPct}%)`);
+
+    if (goal) {
+        const progress = ((totalCurrent / goal) * 100).toFixed(1);
+        lines.push(`Goal:            ${formatCurrency(goal)} (${progress}% reached)`);
+    }
+
+    const text = lines.join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copyTextBtn');
+        const original = btn.textContent;
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => btn.textContent = original, 2000);
+    });
+}
+
 function sharePortfolio() {
     navigator.clipboard.writeText(window.location.href);
     alert('URL copied to clipboard! Share this link to view your portfolio.');
