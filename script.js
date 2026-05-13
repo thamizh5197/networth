@@ -10,34 +10,34 @@ function getTodayDate() {
 
 function loadFromURL() {
     const urlParams = new URLSearchParams(window.location.search);
-    urlParams.forEach((value, key) => {
+    const compressed = urlParams.get('d');
+    if (compressed) {
         try {
-            if (key === 'goal') {
-                goal = JSON.parse(decodeURIComponent(value));
-            } else if (key === 'fire') {
-                fireData = JSON.parse(decodeURIComponent(value));
-            } else {
-                investments[key] = JSON.parse(decodeURIComponent(value));
-            }
+            const json = LZString.decompressFromEncodedURIComponent(compressed);
+            const data = JSON.parse(json);
+            investments = data.investments || {};
+            goal = data.goal || null;
+            fireData = data.fireData || null;
         } catch (e) {
-            console.error('Error parsing:', e);
+            console.error('Error loading data:', e);
         }
-    });
+    }
     render();
 }
 
 function saveToURL() {
-    const params = new URLSearchParams();
-    Object.entries(investments).forEach(([key, data]) => {
-        params.set(key, encodeURIComponent(JSON.stringify(data)));
+    const json = JSON.stringify({ investments, goal, fireData });
+    const compressed = LZString.compressToEncodedURIComponent(json);
+    window.history.replaceState({}, '', `${window.location.pathname}?d=${compressed}`);
+}
+
+function sharePortfolio() {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+        const btn = document.getElementById('shareBtn');
+        const original = btn.textContent;
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => btn.textContent = original, 2000);
     });
-    if (goal) {
-        params.set('goal', encodeURIComponent(JSON.stringify(goal)));
-    }
-    if (fireData) {
-        params.set('fire', encodeURIComponent(JSON.stringify(fireData)));
-    }
-    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
 }
 
 function formatCurrency(amount) {
@@ -103,19 +103,21 @@ function addInvestment() {
         const pricePerUnit = parseFloat(document.getElementById('unitPrice').value);
         const date = document.getElementById('unitDate').value;
         const currentRate = parseFloat(document.getElementById('unitCurrentRate').value);
+        const karat = parseInt(document.getElementById('unitKarat').value);
 
         if (!units || !pricePerUnit || !date || !currentRate) { alert('Please fill all fields'); return; }
 
         investments[key] = {
             name, type: 'unit', unitLabel,
             currentRate,
-            purchases: [{ units, pricePerUnit, amount: units * pricePerUnit, date, id: Date.now() }]
+            purchases: [{ units, pricePerUnit, amount: units * pricePerUnit, date, karat, id: Date.now() }]
         };
 
         document.getElementById('unitLabel').value = '';
         document.getElementById('unitAmount').value = '';
         document.getElementById('unitPrice').value = '';
         document.getElementById('unitCurrentRate').value = '';
+        document.getElementById('unitKarat').value = '24';
     }
 
     document.getElementById('investmentName').value = '';
@@ -161,10 +163,11 @@ function addPurchase(key) {
     if (inv.type === 'unit') {
         const units = parseFloat(document.getElementById(`purchase-units-${key}`).value);
         const pricePerUnit = parseFloat(document.getElementById(`purchase-price-${key}`).value);
+        const karat = parseInt(document.getElementById(`purchase-karat-${key}`).value);
 
         if (!units || !pricePerUnit || !date) { alert('Please fill all fields'); return; }
 
-        inv.purchases.push({ units, pricePerUnit, amount: units * pricePerUnit, date, id: Date.now() + Math.random() });
+        inv.purchases.push({ units, pricePerUnit, amount: units * pricePerUnit, date, karat, id: Date.now() + Math.random() });
     } else {
         const amount = parseFloat(document.getElementById(`purchase-amount-${key}`).value);
 
@@ -253,6 +256,7 @@ function editPurchase(invKey, purchaseId) {
         document.getElementById('editPurchasePriceLabel').textContent = `Price per ${inv.unitLabel} (₹)`;
         document.getElementById('editPurchaseUnits').value = purchase.units;
         document.getElementById('editPurchasePrice').value = purchase.pricePerUnit;
+        document.getElementById('editPurchaseKarat').value = purchase.karat || 24;
     } else {
         document.getElementById('editPurchaseAmount').value = purchase.amount;
     }
@@ -279,10 +283,12 @@ function saveEditPurchase() {
     if (inv.type === 'unit') {
         const units = parseFloat(document.getElementById('editPurchaseUnits').value);
         const pricePerUnit = parseFloat(document.getElementById('editPurchasePrice').value);
+        const karat = parseInt(document.getElementById('editPurchaseKarat').value);
         if (!units || !pricePerUnit) { alert('Please fill all fields'); return; }
         purchase.units = units;
         purchase.pricePerUnit = pricePerUnit;
         purchase.amount = units * pricePerUnit;
+        purchase.karat = karat;
     } else {
         const amount = parseFloat(document.getElementById('editPurchaseAmount').value);
         if (!amount) { alert('Please fill all fields'); return; }
@@ -330,7 +336,7 @@ function copyAsText() {
         sorted.forEach(p => {
             const dateStr = formatDate(p.date);
             if (isUnit) {
-                lines.push(`    ${dateStr}: ${p.units} ${inv.unitLabel} @ ₹${p.pricePerUnit.toLocaleString('en-IN')} = ${formatCurrency(p.amount)}`);
+                lines.push(`    ${dateStr}: ${p.units} ${inv.unitLabel} @ ₹${p.pricePerUnit.toLocaleString('en-IN')} · ${p.karat || 24}kt = ${formatCurrency(p.amount)}`);
             } else {
                 lines.push(`    ${dateStr}: ${formatCurrency(p.amount)}`);
             }
@@ -360,54 +366,6 @@ function copyAsText() {
     });
 }
 
-function sharePortfolio() {
-    navigator.clipboard.writeText(window.location.href);
-    alert('URL copied to clipboard! Share this link to view your portfolio.');
-}
-
-function bookmarkPage() {
-    const pageTitle = 'My Net Worth Tracker';
-    const pageUrl = window.location.href;
-
-    if ('addBookmark' in window) {
-        try {
-            window.addBookmark(pageUrl, pageTitle);
-            alert('✅ Bookmark saved/updated!');
-            return;
-        } catch (e) {
-            console.log('addBookmark not supported');
-        }
-    }
-
-    if (window.sidebar && window.sidebar.addPanel) {
-        try {
-            window.sidebar.addPanel(pageTitle, pageUrl, '');
-            alert('✅ Bookmark saved/updated in Firefox!');
-            return;
-        } catch (e) {
-            console.log('Firefox bookmark failed');
-        }
-    }
-
-    if (window.external && ('AddFavorite' in window.external)) {
-        try {
-            window.external.AddFavorite(pageUrl, pageTitle);
-            alert('✅ Bookmark saved/updated!');
-            return;
-        } catch (e) {
-            console.log('IE/Edge bookmark failed');
-        }
-    }
-
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const shortcut = isMac ? '⌘ Cmd+D' : 'Ctrl+D';
-    
-    navigator.clipboard.writeText(pageUrl).then(() => {
-        alert(`🔖 To bookmark/update this page:\n\n1. Press ${shortcut}\n2. Confirm the bookmark\n\n💡 Your URL has been copied to clipboard!\n\nBookmarking will save all your current data. When you update investments and bookmark again, it will UPDATE your existing bookmark with the new data.`);
-    }).catch(() => {
-        alert(`🔖 To bookmark/update this page:\n\nPress ${shortcut} and confirm\n\nThis will save all your current data and UPDATE any existing bookmark!`);
-    });
-}
 
 function openGoalModal() {
     if (goal) {
@@ -497,9 +455,19 @@ function getTotalUnits(inv) {
 
 function getComputedCurrentValue(inv) {
     if (inv.type === 'unit') {
-        return getTotalUnits(inv) * (inv.currentRate || 0);
+        return inv.purchases.reduce((sum, p) => {
+            const purity = (p.karat || 24) / 24;
+            return sum + (p.units || 0) * purity * (inv.currentRate || 0);
+        }, 0);
     }
     return inv.currentValue || 0;
+}
+
+function getPureUnitEquivalent(inv) {
+    return inv.purchases.reduce((sum, p) => {
+        const purity = (p.karat || 24) / 24;
+        return sum + (p.units || 0) * purity;
+    }, 0);
 }
 
 function render() {
@@ -569,13 +537,20 @@ function render() {
         const isUnit = inv.type === 'unit';
         const totalUnits = isUnit ? getTotalUnits(inv) : 0;
 
+        const pureEquiv = isUnit ? getPureUnitEquivalent(inv) : 0;
+        const hasMixedKarat = isUnit && inv.purchases.some(p => (p.karat || 24) < 24);
         const unitExtraStats = isUnit ? `
             <div>
                 <div class="stat-label">Total ${inv.unitLabel}</div>
                 <div style="font-weight: 600;">${totalUnits.toLocaleString('en-IN')} ${inv.unitLabel}</div>
             </div>
+            ${hasMixedKarat ? `
             <div>
-                <div class="stat-label">Rate / ${inv.unitLabel}</div>
+                <div class="stat-label">Pure 24kt Eq.</div>
+                <div style="font-weight: 600;">${pureEquiv.toFixed(2)} ${inv.unitLabel}</div>
+            </div>` : ''}
+            <div>
+                <div class="stat-label">Rate / ${inv.unitLabel} (24kt)</div>
                 <div style="font-weight: 600;">${formatCurrency(inv.currentRate)}</div>
             </div>
         ` : '';
@@ -589,6 +564,14 @@ function render() {
                 <div class="form-group">
                     <label class="form-label">Price / ${inv.unitLabel} (₹)</label>
                     <input type="number" class="form-input" id="purchase-price-${key}" step="any">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Karat</label>
+                    <select class="form-input" id="purchase-karat-${key}">
+                        <option value="24">24kt (Pure)</option>
+                        <option value="22">22kt</option>
+                        <option value="18">18kt</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Date</label>
@@ -623,7 +606,7 @@ function render() {
         const tableRows = inv.purchases.sort((a, b) => new Date(b.date) - new Date(a.date)).map(p => `
             <tr>
                 <td>${formatDate(p.date)}</td>
-                ${isUnit ? `<td style="text-align:right;">${p.units} ${inv.unitLabel} @ ${formatCurrency(p.pricePerUnit)}/${inv.unitLabel}</td>` : ''}
+                ${isUnit ? `<td style="text-align:right;">${p.units} ${inv.unitLabel} @ ${formatCurrency(p.pricePerUnit)}/${inv.unitLabel} · <span style="color:#94a3b8;">${p.karat || 24}kt</span></td>` : ''}
                 <td style="text-align:right; font-weight:600;">${formatCurrency(p.amount)}</td>
                 <td style="text-align:center;">
                     <button class="btn btn-edit" onclick="editPurchase('${key}', ${p.id})" style="padding: 0.25rem 0.5rem;">✏️</button>
@@ -678,7 +661,7 @@ function render() {
                 <thead>
                     <tr>
                         <th>Purchase Date</th>
-                        ${isUnit ? `<th style="text-align:right;">Units</th>` : ''}
+                        ${isUnit ? `<th style="text-align:right;">Units & Karat</th>` : ''}
                         <th style="text-align:right;">Amount Invested</th>
                         <th style="text-align:center;">Actions</th>
                     </tr>

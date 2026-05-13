@@ -60,9 +60,8 @@
         <button class="btn btn-primary" onclick="toggleForm()">+ Add Investment</button>
 
         <!-- Action bar -->
-        <div style="margin: 1rem 0; display:flex; gap:1rem;">
+        <div style="margin: 1rem 0; display:flex; gap:1rem; flex-wrap:wrap;">
             <button id="shareBtn" class="btn btn-blue" onclick="sharePortfolio()">📤 Share</button>
-            <button id="bookmarkBtn" class="btn btn-secondary" onclick="bookmarkPage()">🔖 Bookmark</button>
             <button id="copyTextBtn" class="btn btn-secondary" onclick="copyAsText()">📋 Copy as Text</button>
         </div>
 
@@ -116,6 +115,14 @@
                 <div class="form-group">
                     <label class="form-label">Purchase Date</label>
                     <input type="date" class="form-input" id="unitDate">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Karat</label>
+                    <select class="form-input" id="unitKarat">
+                        <option value="24">24kt (Pure)</option>
+                        <option value="22">22kt</option>
+                        <option value="18">18kt</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Current Rate per Unit (₹)</label>
@@ -243,6 +250,14 @@
                     <label class="form-label" id="editPurchasePriceLabel">Price per unit (₹)</label>
                     <input type="number" class="form-input" id="editPurchasePrice" step="any">
                 </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label class="form-label">Karat</label>
+                    <select class="form-input" id="editPurchaseKarat">
+                        <option value="24">24kt (Pure)</option>
+                        <option value="22">22kt</option>
+                        <option value="18">18kt</option>
+                    </select>
+                </div>
             </div>
             <div class="form-group" style="margin-top: 1rem;">
                 <label class="form-label">Date</label>
@@ -255,6 +270,7 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
